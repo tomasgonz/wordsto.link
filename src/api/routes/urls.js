@@ -454,10 +454,12 @@ function buildUrlPath(identifier, keywords) {
 }
 
 function buildFullUrl(request, identifier, keywords, shortCode = null) {
-    // In production, always use wordsto.link
-    const isProduction = process.env.NODE_ENV === 'production';
-    const protocol = isProduction ? 'https' : (request.headers['x-forwarded-proto'] || 'http');
-    const host = isProduction ? 'wordsto.link' : request.headers.host;
+    // Always use wordsto.link unless we're on localhost
+    const requestHost = request.headers.host || '';
+    const isLocalhost = requestHost.startsWith('localhost') || requestHost.startsWith('127.0.0.1');
+    
+    const protocol = isLocalhost ? 'http' : 'https';
+    const host = isLocalhost ? requestHost : 'wordsto.link';
     const baseUrl = `${protocol}://${host}`;
     
     if (shortCode) {
