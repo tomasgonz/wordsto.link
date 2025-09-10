@@ -454,8 +454,10 @@ function buildUrlPath(identifier, keywords) {
 }
 
 function buildFullUrl(request, identifier, keywords, shortCode = null) {
-    const protocol = request.headers['x-forwarded-proto'] || 'http';
-    const host = request.headers.host;
+    // In production, always use wordsto.link
+    const isProduction = process.env.NODE_ENV === 'production';
+    const protocol = isProduction ? 'https' : (request.headers['x-forwarded-proto'] || 'http');
+    const host = isProduction ? 'wordsto.link' : request.headers.host;
     const baseUrl = `${protocol}://${host}`;
     
     if (shortCode) {

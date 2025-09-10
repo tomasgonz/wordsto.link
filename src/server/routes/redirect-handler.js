@@ -151,6 +151,7 @@ export async function redirectHandler(fastify, opts) {
 
         } catch (error) {
             fastify.log.error('Redirect handler error:', error);
+            fastify.log.error('Error stack:', error.stack);
             
             return reply.status(500).send({
                 statusCode: 500,
