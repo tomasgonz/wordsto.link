@@ -124,17 +124,9 @@ export async function redirectHandler(fastify, opts) {
 
             const responseTime = Date.now() - startTime;
 
-            const visitorId = request.cookies.visitor_id || nanoid(16);
-            if (!request.cookies.visitor_id) {
-                reply.setCookie('visitor_id', visitorId, {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
-                    sameSite: 'lax',
-                    maxAge: 365 * 24 * 60 * 60,
-                    path: '/'
-                });
-            }
-
+            // TODO: Fix cookie handling - setCookie method not available
+            const visitorId = nanoid(16);
+            
             const userAgentData = parseUserAgent(request.headers['user-agent']);
             const clientIp = getClientIp(request);
             const utmParams = extractUtmParams(request.query);
@@ -161,12 +153,19 @@ export async function redirectHandler(fastify, opts) {
             return reply.redirect(301, lookupResult.original_url);
 
         } catch (error) {
-            fastify.log.error('Redirect handler error:', error);
+            fastify.log.error('Redirect handler error object:', {
+                message: error?.message || 'No message',
+                stack: error?.stack || 'No stack',
+                name: error?.name || 'No name',
+                code: error?.code || 'No code',
+                fullError: JSON.stringify(error, null, 2)
+            });
             
             return reply.status(500).send({
                 statusCode: 500,
                 error: 'Internal Server Error',
-                message: 'An error occurred while processing your request'
+                message: 'An error occurred while processing your request',
+                debug: process.env.NODE_ENV === 'development' ? error?.message : undefined
             });
         }
     });

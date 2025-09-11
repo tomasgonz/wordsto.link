@@ -1,0 +1,52 @@
+server {
+    listen 80;
+    server_name wordsto.link www.wordsto.link;
+
+    # Handle shortened URLs - proxy to backend
+    location ~ ^/[^/]+(/[^/]+)*$ {
+        # Check if it's not a known frontend route
+        set $is_frontend 0;
+        
+        if ($uri ~* ^/(dashboard|create|login|signup|settings|api)/) {
+            set $is_frontend 1;
+        }
+        
+        # If not a frontend route, proxy to backend for redirect
+        if ($is_frontend = 0) {
+            proxy_pass http://localhost:3000$request_uri;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+        
+        # If it's a frontend route, proxy to Next.js
+        if ($is_frontend = 1) {
+            proxy_pass http://localhost:3001$request_uri;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+    
+    # Default - proxy to Next.js frontend
+    location / {
+        proxy_pass http://localhost:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+    
+    # API routes - proxy to backend
+    location /api {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
