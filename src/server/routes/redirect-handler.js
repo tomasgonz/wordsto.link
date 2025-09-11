@@ -81,11 +81,19 @@ export async function redirectHandler(fastify, opts) {
                 }
             }
 
+            // Try cache first
             const cached = await fastify.cache.get(cacheKey);
             if (cached) {
-                lookupResult = JSON.parse(cached);
-                fastify.log.debug(`Cache hit for ${cacheKey}`);
-            } else {
+                try {
+                    lookupResult = JSON.parse(cached);
+                    fastify.log.debug(`Cache hit for ${cacheKey}`);
+                } catch (parseError) {
+                    fastify.log.error('Failed to parse cache:', parseError);
+                }
+            }
+            
+            // If not in cache or cache parse failed, query database
+            if (!lookupResult) {
                 if (identifier) {
                     lookupResult = await fastify.db.findShortenedUrl(identifier, keywords);
                 }
@@ -131,18 +139,21 @@ export async function redirectHandler(fastify, opts) {
             const clientIp = getClientIp(request);
             const utmParams = extractUtmParams(request.query);
 
-            fastify.analytics.track({
-                shortened_url_id: lookupResult.id,
-                visitor_id: visitorId,
-                ip_address: clientIp,
-                user_agent: request.headers['user-agent'],
-                referer: request.headers.referer || request.headers.referrer,
-                ...userAgentData,
-                ...utmParams,
-                response_time_ms: responseTime
-            }).catch(err => {
-                fastify.log.error('Failed to track analytics:', err);
-            });
+            // Track analytics if available
+            if (fastify.analytics && fastify.analytics.track) {
+                fastify.analytics.track({
+                    shortened_url_id: lookupResult.id,
+                    visitor_id: visitorId,
+                    ip_address: clientIp,
+                    user_agent: request.headers['user-agent'],
+                    referer: request.headers.referer || request.headers.referrer,
+                    ...userAgentData,
+                    ...utmParams,
+                    response_time_ms: responseTime
+                }).catch(err => {
+                    fastify.log.error('Failed to track analytics:', err);
+                });
+            }
 
             reply.header('Cache-Control', 'public, max-age=3600');
             reply.header('X-Robots-Tag', 'noindex, nofollow');
@@ -151,7 +162,6 @@ export async function redirectHandler(fastify, opts) {
 
         } catch (error) {
             fastify.log.error('Redirect handler error:', error);
-            fastify.log.error('Error stack:', error.stack);
             
             return reply.status(500).send({
                 statusCode: 500,

@@ -79,11 +79,11 @@ class Database {
     async findShortenedUrl(identifier, keywords) {
         const query = identifier
             ? `SELECT * FROM shortened_urls 
-               WHERE identifier = $1 AND keywords @> $2::text[] 
+               WHERE identifier = $1 AND keywords = $2::text[] 
                AND is_active = true 
                AND (expires_at IS NULL OR expires_at > NOW())`
             : `SELECT * FROM shortened_urls 
-               WHERE identifier IS NULL AND keywords @> $1::text[] 
+               WHERE identifier IS NULL AND keywords = $1::text[] 
                AND is_active = true 
                AND (expires_at IS NULL OR expires_at > NOW())`;
         
