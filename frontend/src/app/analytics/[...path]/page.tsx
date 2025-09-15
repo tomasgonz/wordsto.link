@@ -12,6 +12,7 @@ import {
   Users, Link2, ArrowLeft, Download, Filter
 } from 'lucide-react';
 import Link from 'next/link';
+import { useApiClient } from '@/hooks/useApi';
 
 interface AnalyticsData {
   url: {
@@ -62,6 +63,7 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 export default function AnalyticsPage() {
   const params = useParams();
   const path = Array.isArray(params.path) ? params.path.join('/') : params.path;
+  const api = useApiClient();
   
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,16 +79,10 @@ export default function AnalyticsPage() {
     setError(null);
     
     try {
-      const response = await fetch(`/api/analytics/${path}?period=${period}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch analytics');
-      }
-      
-      const result = await response.json();
-      setData(result);
+      const response = await api.get(`/analytics/${path}?period=${period}`);
+      setData(response.data);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message || 'Failed to fetch analytics');
     } finally {
       setLoading(false);
     }
