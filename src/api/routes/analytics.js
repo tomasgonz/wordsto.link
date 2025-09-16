@@ -20,7 +20,8 @@ export async function analyticsRoutes(fastify, opts) {
         }
 
         try {
-            const { identifier, keywords } = pathParamsSchema.parse({ path: pathString });
+            const { path: parsedPath } = pathParamsSchema.parse({ path: pathString });
+            const { identifier, keywords } = parsedPath;
             const query = request.validatedQuery;
 
             const urlResult = await fastify.db.query(
