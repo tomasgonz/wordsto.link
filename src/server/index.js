@@ -17,7 +17,7 @@ const envSchema = {
     required: ['DATABASE_URL', 'REDIS_URL'],
     properties: {
         NODE_ENV: { type: 'string', default: 'development' },
-        PORT: { type: 'number', default: 3000 },
+        PORT: { type: 'number', default: 8080 },
         HOST: { type: 'string', default: '0.0.0.0' },
         DATABASE_URL: { type: 'string' },
         REDIS_URL: { type: 'string' },
@@ -51,28 +51,65 @@ export async function createServer() {
             dotenv: true
         });
 
+        const nodeEnv = (fastify.config?.NODE_ENV || 'development').toLowerCase();
+        const isDevelopment = nodeEnv === 'development';
+
+        // Log the environment mode for debugging
+        fastify.log.info(`CORS Configuration - NODE_ENV: ${nodeEnv}, isDevelopment: ${isDevelopment}`);
+
         await fastify.register(cors, {
             origin: (origin, cb) => {
+                // Log incoming origin for debugging
+                fastify.log.debug(`CORS request from origin: ${origin}`);
+
+                // Allow all origins in development
+                if (isDevelopment) {
+                    cb(null, true);
+                    return;
+                }
+
                 const allowedOrigins = [
                     'http://localhost:3000',
                     'http://localhost:3001',
-                    'http://10.0.1.2:3000',
-                    'http://10.0.1.2:3001',
+                    'http://localhost:8080',
+                    'http://127.0.0.1:3000',
+                    'http://127.0.0.1:3001',
+                    'http://127.0.0.1:8080',
+                    'http://0.0.0.0:3000',
+                    'http://0.0.0.0:3001',
+                    'http://0.0.0.0:8080',
+                    'http://100.84.239.89:3000',  // Tailscale IP
+                    'http://100.84.239.89:3001',
+                    'http://100.84.239.89:8080',
                     'http://ubuntu-server-1-hetzner-fsn1:3000',
                     'http://ubuntu-server-1-hetzner-fsn1:3001',
+                    'http://ubuntu-server-1-hetzner-fsn1:8080',
+                    'http://10.0.1.2:3000',
+                    'http://10.0.1.2:3001',
+                    'http://10.0.1.2:8080',
+                    'http://138.201.206.113:3000',
+                    'http://138.201.206.113:3001',
+                    'http://138.201.206.113:8080',
+                    'https://138.201.206.113:3000',
+                    'https://138.201.206.113:3001',
+                    'https://138.201.206.113:8080',
                     'https://wordsto.link',
                     'https://www.wordsto.link'
                 ];
-                
+
                 if (!origin || allowedOrigins.includes(origin)) {
-                    cb(null, true);
-                } else if (process.env.NODE_ENV === 'development') {
                     cb(null, true);
                 } else {
                     cb(new Error('Not allowed by CORS'));
                 }
             },
-            credentials: true
+            credentials: true,
+            methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+            allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With', 'Cache-Control', 'Pragma'],
+            exposedHeaders: ['Content-Length', 'Content-Type', 'X-Request-Id'],
+            preflightContinue: false,
+            optionsSuccessStatus: 204,
+            maxAge: 86400 // 24 hours
         });
 
         await fastify.register(helmet, {
@@ -180,13 +217,28 @@ export async function startServer() {
     const server = await createServer();
     
     try {
-        const address = await server.listen({
-            port: server.config.PORT,
-            host: server.config.HOST
-        });
-        
-        server.log.info(`Server running at ${address}`);
-        return server;
+        const configuredHost = server.config.HOST || '::';
+        const hostCandidates = configuredHost === '0.0.0.0'
+            ? ['::', '0.0.0.0']
+            : [configuredHost];
+
+        for (const host of hostCandidates) {
+            try {
+                const address = await server.listen({
+                    port: server.config.PORT,
+                    host
+                });
+                server.log.info({ address, host, port: server.config.PORT }, 'Server running');
+                return server;
+            } catch (err) {
+                if (host !== hostCandidates[hostCandidates.length - 1]) {
+                    server.log.warn({ error: err, host }, 'Failed to bind host, retrying with next option');
+                    continue;
+                }
+                server.log.error(err);
+                process.exit(1);
+            }
+        }
     } catch (error) {
         server.log.error(error);
         process.exit(1);

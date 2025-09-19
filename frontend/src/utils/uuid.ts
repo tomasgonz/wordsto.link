@@ -3,9 +3,13 @@
  * Uses crypto.randomUUID if available, otherwise falls back to a polyfill
  */
 export function generateUUID(): string {
-  // Check if crypto.randomUUID is available
+  // Check if crypto.randomUUID is available and actually works
   if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.randomUUID === 'function') {
-    return window.crypto.randomUUID();
+    try {
+      return window.crypto.randomUUID();
+    } catch (e) {
+      // Fall through to polyfill if randomUUID fails (Safari issue)
+    }
   }
   
   // Fallback for older browsers

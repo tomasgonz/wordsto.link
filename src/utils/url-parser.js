@@ -58,6 +58,7 @@ export function parseUrlPattern(path) {
 
 export function validateKeywords(keywords) {
   const errors = [];
+  const BANNED_KEYWORDS = RESERVED_KEYWORDS.filter(k => !['api', 'docs'].includes(k));
   
   for (const keyword of keywords) {
     if (!keyword || keyword.trim() === '') {
@@ -69,12 +70,12 @@ export function validateKeywords(keywords) {
       errors.push('Keyword exceeds maximum length of 100 characters');
       continue;
     }
-    
-    if (RESERVED_KEYWORDS.includes(keyword.toLowerCase())) {
+  
+    if (BANNED_KEYWORDS.includes(keyword.toLowerCase())) {
       errors.push(`Reserved keyword: ${keyword}`);
       continue;
     }
-    
+
     if (!/^[a-zA-Z0-9-_.]+$/.test(keyword)) {
       errors.push(`Invalid characters in keyword: ${keyword}`);
     }

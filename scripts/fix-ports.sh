@@ -33,13 +33,13 @@ fi
 
 echo ""
 
-# Check Adminer port 8080
-echo "Adminer (port 8080):"
-if sudo lsof -i :8080 > /dev/null 2>&1; then
-    echo "  ⚠️  Port 8080 is in use"
-    sudo lsof -i :8080
+# Check Adminer port 8000
+echo "Adminer (port 8000):"
+if sudo lsof -i :8000 > /dev/null 2>&1; then
+    echo "  ⚠️  Port 8000 is in use"
+    sudo lsof -i :8000
 else
-    echo "  ✅ Port 8080 is available"
+    echo "  ✅ Port 8000 is available"
 fi
 
 echo ""

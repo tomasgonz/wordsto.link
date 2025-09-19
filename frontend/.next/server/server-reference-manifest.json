@@ -1,16 +1,5 @@
 {
-  "node": {
-    "c2949568f8f30827c3f74ca60a841d37727d7493": {
-      "workers": {
-        "app/profile/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Ftomas%2Fwordsto.link%2Ffrontend%2Fnode_modules%2F%40clerk%2Fnextjs%2Fdist%2Fesm%2Fapp-router%2Fserver-actions.js%22%2C%5B%22invalidateCacheAction%22%5D%5D%5D&__client_imported__=true!",
-        "app/dashboard/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Ftomas%2Fwordsto.link%2Ffrontend%2Fnode_modules%2F%40clerk%2Fnextjs%2Fdist%2Fesm%2Fapp-router%2Fserver-actions.js%22%2C%5B%22invalidateCacheAction%22%5D%5D%5D&__client_imported__=true!"
-      },
-      "layer": {
-        "app/profile/page": "action-browser",
-        "app/dashboard/page": "action-browser"
-      }
-    }
-  },
+  "node": {},
   "edge": {},
-  "encryptionKey": "5REP7hE5Le2QAcyuWpOR0/xvqVoLl18T80m6EBGQ5iQ="
+  "encryptionKey": "T2s30TEl2Hb//HyY9mqhJsV1kHo7e1otBtaGe/VHxs4="
 }

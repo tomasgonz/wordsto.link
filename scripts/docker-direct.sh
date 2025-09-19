@@ -33,7 +33,7 @@ echo "Starting Adminer..."
 sudo docker run -d \
   --name wordsto-adminer \
   --network wordsto-network \
-  -p 8080:8080 \
+  -p 8000:8080 \
   -e ADMINER_DEFAULT_SERVER=wordsto-postgres \
   adminer
 
@@ -41,9 +41,9 @@ echo ""
 echo "✅ Services started!"
 echo ""
 echo "Access from your network:"
-echo "  Backend:  http://$(hostname -I | awk '{print $1}'):3000"
-echo "  Frontend: http://$(hostname -I | awk '{print $1}'):3001"
-echo "  Adminer:  http://$(hostname -I | awk '{print $1}'):8080"
+echo "  Backend:  http://$(hostname -I | awk '{print $1}'):8080"
+echo "  Frontend: http://$(hostname -I | awk '{print $1}'):3000"
+echo "  Adminer:  http://$(hostname -I | awk '{print $1}'):8000"
 echo ""
 echo "Database connection:"
 echo "  Host: localhost"

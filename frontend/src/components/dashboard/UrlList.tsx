@@ -20,7 +20,7 @@ import Link from 'next/link';
 
 interface Url {
   id: string;
-  path: string;
+  path?: string;
   short_code: string;
   identifier: string | null;
   keywords: string[];
@@ -101,7 +101,7 @@ export function UrlList({ urls, onEdit, onDelete, onToggleActive }: UrlListProps
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-semibold text-gray-900 truncate">
-                      {url.title || url.path}
+                      {url.title || url.path || (url.identifier && url.keywords ? `${url.identifier}/${url.keywords.join('/')}` : (url.keywords ? url.keywords.join('/') : ''))}
                     </h3>
                     {!url.is_active && (
                       <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
@@ -180,7 +180,12 @@ export function UrlList({ urls, onEdit, onDelete, onToggleActive }: UrlListProps
 
               <div className="flex items-center gap-2">
                 <Link
-                  href={`/analytics/${url.path}`}
+                  href={(() => {
+                    if (url.path) return `/analytics/${url.path}`;
+                    if (url.identifier && url.keywords?.length) return `/analytics/${url.identifier}/${url.keywords.join('/')}`;
+                    if (url.keywords?.length) return `/analytics/${url.keywords.join('/')}`;
+                    return '/analytics';
+                  })()}
                   className="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                   title="View Analytics"
                 >
@@ -267,7 +272,7 @@ export function UrlList({ urls, onEdit, onDelete, onToggleActive }: UrlListProps
               </div>
             )}
             <div className="flex items-center gap-1">
-              Keywords: {url.keywords.map(k => (
+              Keywords: {url.keywords?.map(k => (
                 <span key={k} className="px-1.5 py-0.5 bg-gray-100 rounded">
                   {k}
                 </span>

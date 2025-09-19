@@ -188,18 +188,18 @@ export async function userRoutes(fastify, opts) {
         }
 
         try {
-            const result = await fastify.db.query(
-                'SELECT * FROM check_identifier_availability($1, $2)',
-                [identifier, userId]
+            // Check if identifier is taken in the users table
+            const userCheck = await fastify.db.query(
+                'SELECT id FROM users WHERE identifier = $1 AND ($2::uuid IS NULL OR id != $2)',
+                [identifier.toLowerCase(), userId]
             );
 
-            const availability = result.rows[0];
+            const isAvailable = userCheck.rows.length === 0;
 
             return reply.send({
                 identifier,
-                is_available: availability.is_available,
-                owner_id: availability.owner_id,
-                claimed_at: availability.claimed_at
+                is_available: isAvailable,
+                message: isAvailable ? 'Identifier is available' : 'Identifier is already taken'
             });
         } catch (error) {
             fastify.log.error('Failed to check identifier availability:', error);
@@ -212,12 +212,41 @@ export async function userRoutes(fastify, opts) {
         preHandler: fastify.authenticate
     }, async (request, reply) => {
         const userId = request.user.id;
-        const { username, full_name, metadata } = request.body;
+        const { username, full_name, metadata, identifier, email } = request.body;
 
         try {
             const updates = [];
             const values = [];
             let paramCount = 1;
+
+            // Handle identifier change with uniqueness check
+            if (identifier !== undefined) {
+                // Validate identifier format
+                if (!validateIdentifier(identifier)) {
+                    return reply.status(400).send({
+                        statusCode: 400,
+                        error: 'Bad Request',
+                        message: 'Invalid identifier format. Must be 2-20 characters, alphanumeric with hyphens or underscores, starting and ending with alphanumeric characters.'
+                    });
+                }
+
+                // Check if identifier is available
+                const checkResult = await fastify.db.query(
+                    'SELECT id FROM users WHERE identifier = $1 AND id != $2',
+                    [identifier, userId]
+                );
+
+                if (checkResult.rows.length > 0) {
+                    return reply.status(409).send({
+                        statusCode: 409,
+                        error: 'Conflict',
+                        message: 'This identifier is already taken'
+                    });
+                }
+
+                updates.push(`identifier = $${paramCount++}`);
+                values.push(identifier);
+            }
 
             if (username !== undefined) {
                 updates.push(`username = $${paramCount++}`);
@@ -227,6 +256,25 @@ export async function userRoutes(fastify, opts) {
             if (full_name !== undefined) {
                 updates.push(`full_name = $${paramCount++}`);
                 values.push(full_name);
+            }
+
+            if (email !== undefined) {
+                // Check if email is already in use
+                const emailCheck = await fastify.db.query(
+                    'SELECT id FROM users WHERE email = $1 AND id != $2',
+                    [email, userId]
+                );
+
+                if (emailCheck.rows.length > 0) {
+                    return reply.status(409).send({
+                        statusCode: 409,
+                        error: 'Conflict',
+                        message: 'This email is already in use'
+                    });
+                }
+
+                updates.push(`email = $${paramCount++}`);
+                values.push(email);
             }
 
             if (metadata !== undefined) {
@@ -246,10 +294,10 @@ export async function userRoutes(fastify, opts) {
             values.push(userId);
 
             const query = `
-                UPDATE users 
+                UPDATE users
                 SET ${updates.join(', ')}
                 WHERE id = $${paramCount}
-                RETURNING *`;
+                RETURNING id, email, full_name, identifier, username, subscription_tier, created_at`;
 
             const result = await fastify.db.query(query, values);
 

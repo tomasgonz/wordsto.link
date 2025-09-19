@@ -107,7 +107,9 @@ async function startDevelopment() {
         
         // Step 3: Start backend with nodemon
         console.log(chalk.blue('\n🔧 Starting backend server...\n'));
-        spawnProcess('Backend', 'npx', ['nodemon', 'src/server/index.js']);
+        spawnProcess('Backend', 'npx', ['nodemon', 'src/server/index.js'], {
+            env: { ...process.env, PORT: '8080' }
+        });
         
         // Wait for backend to start
         await new Promise(resolve => setTimeout(resolve, 3000));
@@ -121,9 +123,9 @@ async function startDevelopment() {
         // Display success message
         setTimeout(() => {
             console.log(chalk.green.bold('\n✨ Development environment is ready!\n'));
-            console.log(chalk.white('🔗 Backend:  ') + chalk.cyan('http://localhost:3000'));
-            console.log(chalk.white('🎨 Frontend: ') + chalk.cyan('http://localhost:3001'));
-            console.log(chalk.white('🗄️  Adminer:  ') + chalk.cyan('http://localhost:8080'));
+            console.log(chalk.white('🔗 Backend:  ') + chalk.cyan('http://localhost:8080'));
+            console.log(chalk.white('🎨 Frontend: ') + chalk.cyan('http://localhost:3000'));
+            console.log(chalk.white('🗄️  Adminer:  ') + chalk.cyan('http://localhost:8000'));
             console.log(chalk.white('\nPress Ctrl+C to stop all services.\n'));
         }, 5000);
         

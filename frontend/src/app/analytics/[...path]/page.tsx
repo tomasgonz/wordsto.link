@@ -160,7 +160,7 @@ export default function AnalyticsPage() {
               </h1>
               <div className="mt-2 flex items-center gap-4 text-sm text-gray-600">
                 <div className="flex items-center gap-1">
-                  <Link className="w-4 h-4" />
+                  <Link2 className="w-4 h-4" />
                   <code className="font-mono bg-gray-100 px-2 py-0.5 rounded">
                     wordsto.link/{data.url.path}
                   </code>

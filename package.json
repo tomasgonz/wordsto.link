@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node scripts/dev-server.js",
+    "dev:all": "node scripts/start-all.js",
     "dev:backend": "nodemon src/server/index.js",
     "dev:frontend": "cd frontend && npm run dev",
     "docker:up": "docker-compose up -d",

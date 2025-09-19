@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { CreateUrlForm } from '@/components/forms/CreateUrlForm';
 import { UrlList } from '@/components/dashboard/UrlList';
-import { useUrls, useDeleteUrl, useUpdateUrl } from '@/hooks/useApi';
+import { useUrls, useDeleteUrl } from '@/hooks/useApi';
+import { getApiUrl } from '@/lib/config';
+import { toast } from 'sonner';
 import { 
   Plus, 
   Search, 
@@ -31,19 +33,37 @@ export default function DashboardPage() {
   });
 
   const deleteUrl = useDeleteUrl();
-  const updateUrl = useUpdateUrl('');
 
   const handleDelete = async (url: any) => {
     if (confirm('Are you sure you want to delete this URL?')) {
       await deleteUrl.mutateAsync({ id: url.id });
+      refetch();
     }
   };
 
   const handleToggleActive = async (url: any) => {
-    await updateUrl.mutateAsync({ 
-      id: url.id, 
-      data: { is_active: !url.is_active } 
-    });
+    // We'll need to make a direct API call here since the hook expects an id in advance
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch(getApiUrl(`api/urls/${url.id}`), {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ is_active: !url.is_active })
+      });
+
+      if (response.ok) {
+        toast.success('URL updated successfully');
+        refetch();
+      } else {
+        toast.error('Failed to update URL');
+      }
+    } catch (error) {
+      toast.error('Failed to update URL');
+    }
   };
 
   const handleCreateSuccess = () => {

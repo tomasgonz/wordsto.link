@@ -3,13 +3,18 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || '');
+const shouldSend = String(process.env.FORCE_EMAIL_SEND).toLowerCase() === 'true';
 
 export class EmailService {
   static async sendVerificationEmail(user, verificationToken) {
     const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/verify-email?token=${verificationToken}`;
     
     try {
+      if (!shouldSend) {
+        console.log('[EmailService] Skipping verification email (FORCE_EMAIL_SEND!=true). URL:', verificationUrl);
+        return { success: true, skipped: true };
+      }
       const { data, error } = await resend.emails.send({
         from: process.env.EMAIL_FROM || 'WordsTo.Link <onboarding@wordsto.link>',
         to: [user.email],
@@ -90,6 +95,10 @@ export class EmailService {
 
   static async sendWelcomeEmail(user) {
     try {
+      if (!shouldSend) {
+        console.log('[EmailService] Skipping welcome email (FORCE_EMAIL_SEND!=true).');
+        return { success: true, skipped: true };
+      }
       const { data, error } = await resend.emails.send({
         from: process.env.EMAIL_FROM || 'WordsTo.Link <onboarding@wordsto.link>',
         to: [user.email],
@@ -184,6 +193,10 @@ export class EmailService {
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/reset-password?token=${resetToken}`;
     
     try {
+      if (!shouldSend) {
+        console.log('[EmailService] Skipping reset email (FORCE_EMAIL_SEND!=true). URL:', resetUrl);
+        return { success: true, skipped: true };
+      }
       const { data, error } = await resend.emails.send({
         from: process.env.EMAIL_FROM || 'WordsTo.Link <onboarding@wordsto.link>',
         to: [user.email],

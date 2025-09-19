@@ -3,10 +3,12 @@ import axios, { AxiosError } from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-// Dynamically determine API URL based on current hostname
-const API_BASE_URL = typeof window !== 'undefined' 
-  ? `http://${window.location.hostname}:3000/api`
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api');
+import { getApiUrl } from '@/lib/config';
+
+// Get base API URL without the '/api' part since we'll add it per endpoint
+const API_BASE_URL = typeof window !== 'undefined'
+  ? getApiUrl('').replace(/\/$/, '') // Remove trailing slash
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -78,7 +80,7 @@ export function useUrls(params: UrlsParams = {}) {
   return useQuery({
     queryKey: ['urls', queryString],
     queryFn: async () => {
-      const response = await api.get(`/urls?${queryString}`);
+      const response = await api.get(`/api/urls?${queryString}`);
       return response.data;
     },
   });
@@ -88,7 +90,7 @@ export function useUrl(id: string) {
   return useQuery({
     queryKey: ['url', id],
     queryFn: async () => {
-      const response = await api.get(`/urls/${id}`);
+      const response = await api.get(`/api/urls/${id}`);
       return response.data;
     },
     enabled: !!id,
@@ -100,7 +102,7 @@ export function useCreateUrl() {
 
   return useMutation({
     mutationFn: async (data: CreateUrlData) => {
-      const response = await api.post('/shorten', data);
+      const response = await api.post('/api/urls', data);
       return response.data;
     },
     onSuccess: () => {
@@ -118,7 +120,7 @@ export function useUpdateUrl(id: string) {
 
   return useMutation({
     mutationFn: async (data: UpdateUrlData) => {
-      const response = await api.patch(`/urls/${id}`, data);
+      const response = await api.patch(`/api/urls/${id}`, data);
       return response.data;
     },
     onSuccess: () => {
@@ -137,7 +139,7 @@ export function useDeleteUrl() {
 
   return useMutation({
     mutationFn: async ({ id, permanent }: { id: string; permanent?: boolean }) => {
-      const response = await api.delete(`/urls/${id}?permanent=${permanent || false}`);
+      const response = await api.delete(`/api/urls/${id}?permanent=${permanent || false}`);
       return response.data;
     },
     onSuccess: () => {
@@ -154,7 +156,7 @@ export function useAnalytics(path: string, period: string = '30d') {
   return useQuery({
     queryKey: ['analytics', path, period],
     queryFn: async () => {
-      const response = await api.get(`/analytics/${path}?period=${period}`);
+      const response = await api.get(`/api/analytics/${path}?period=${period}`);
       return response.data;
     },
     enabled: !!path,
@@ -165,7 +167,7 @@ export function useAnalyticsSummary(period: string = '30d') {
   return useQuery({
     queryKey: ['analytics-summary', period],
     queryFn: async () => {
-      const response = await api.get(`/analytics/summary?period=${period}`);
+      const response = await api.get(`/api/analytics/summary?period=${period}`);
       return response.data;
     },
   });
@@ -176,7 +178,7 @@ export function useBulkCreateUrls() {
 
   return useMutation({
     mutationFn: async (urls: CreateUrlData[]) => {
-      const response = await api.post('/shorten/bulk', { urls });
+      const response = await api.post('/api/urls/bulk', { urls });
       return response.data;
     },
     onSuccess: (data) => {
@@ -195,7 +197,7 @@ export function useBulkCreateUrls() {
 export function useExportAnalytics(format: 'json' | 'csv' = 'json') {
   return useMutation({
     mutationFn: async (params: { period?: string; include_analytics?: boolean }) => {
-      const response = await api.get('/analytics/export', {
+      const response = await api.get('/api/analytics/export', {
         params: { format, ...params },
         responseType: format === 'csv' ? 'blob' : 'json',
       });
@@ -225,7 +227,7 @@ export function useApiHealth() {
   return useQuery({
     queryKey: ['health'],
     queryFn: async () => {
-      const response = await api.get('/health');
+      const response = await api.get('/api/health');
       return response.data;
     },
     refetchInterval: 30000,

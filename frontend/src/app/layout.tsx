@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import "@/lib/polyfills"; // Load polyfills before anything else
 import { Providers } from "./providers";
 import { Navigation } from "@/components/layout/Navigation";
 import { Toaster } from "sonner";

@@ -3,16 +3,15 @@ import { nanoid } from 'nanoid';
 
 export async function shortenRoutes(fastify, opts) {
     fastify.post('/shorten', {
-        // TODO: Add authentication when Clerk is configured
-        // preHandler: [
-        //     fastify.authenticate,
-        //     fastify.checkUrlLimit,
-        //     fastify.requireIdentifierOwnership,
-        //     validateRequest(createShortenSchema)
-        // ]
+        preHandler: [
+            fastify.authenticate,
+            // TODO: Add these middlewares later
+            // fastify.checkUrlLimit,
+            // fastify.requireIdentifierOwnership,
+            validateRequest(createShortenSchema)
+        ]
     }, async (request, reply) => {
-        // TODO: Get from authenticated user
-        const userId = '2c6b2dec-3e78-4bfd-bd0f-624036f7a327'; // Demo user ID for testing
+        const userId = request.user.id;
         const {
             identifier,
             keywords,
@@ -130,14 +129,13 @@ export async function shortenRoutes(fastify, opts) {
     });
 
     fastify.post('/shorten/bulk', {
-        // TODO: Add authentication when Clerk is configured
-        // preHandler: [
-        //     fastify.authenticate,
-        //     fastify.requirePlan(['business', 'enterprise'])
-        // ]
+        preHandler: [
+            fastify.authenticate,
+            // TODO: Add plan check later
+            // fastify.requirePlan(['business', 'enterprise'])
+        ]
     }, async (request, reply) => {
-        // TODO: Get from authenticated user
-        const userId = '2c6b2dec-3e78-4bfd-bd0f-624036f7a327'; // Demo user ID for testing
+        const userId = request.user.id;
         const { urls } = request.body;
 
         if (!Array.isArray(urls) || urls.length === 0) {

@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { getApiUrl } from '@/lib/config';
+import { apiClient } from '@/lib/api-client';
 import { 
   User, Mail, Link2, Shield, Bell, 
   Check, X, Info, Edit2, Save, AlertCircle
@@ -82,18 +84,36 @@ export default function SettingsPage() {
 
   const checkIdentifierAvailability = async () => {
     setCheckingIdentifier(true);
-    
-    // Simulate API call - in production, this would check your backend
-    setTimeout(() => {
-      const reserved = ['admin', 'api', 'app', 'www', 'mail', 'blog', 'help', 'support', 'docs', 'status'];
-      const isAvailable = !reserved.includes(newIdentifier.toLowerCase());
-      setIdentifierAvailable(isAvailable);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(getApiUrl(`api/user/identifiers/check/${newIdentifier}`), {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      setIdentifierAvailable(data.is_available);
       setCheckingIdentifier(false);
-      
-      if (!isAvailable) {
+
+      if (!data.is_available) {
         setIdentifierError('This identifier is already taken');
       }
-    }, 300);
+    } catch (error) {
+      console.error('Failed to check identifier availability:', error);
+      setCheckingIdentifier(false);
+      setIdentifierError('Failed to check availability. Please try again.');
+      setIdentifierAvailable(false);
+    }
   };
 
   const handleIdentifierChange = (value: string) => {
@@ -118,21 +138,39 @@ export default function SettingsPage() {
     setIsSaving(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      const updateData: any = {
+        full_name: profileData.name,
+        email: profileData.email
+      };
+
+      // Only include identifier if it's different from the current one
+      if (newIdentifier !== user?.identifier) {
+        updateData.identifier = newIdentifier;
+      }
+
+      const token = localStorage.getItem('token');
+      const { data: updatedUser, error } = await apiClient('api/user/profile', {
+        method: 'PATCH',
+        token,
+        body: JSON.stringify(updateData)
+      });
+
+      if (error) {
+        throw new Error(error);
+      }
+
       // Update user context
       updateUser({
         ...user!,
-        name: profileData.name,
-        email: profileData.email,
-        identifier: newIdentifier
+        name: updatedUser.full_name,
+        email: updatedUser.email,
+        identifier: updatedUser.identifier
       });
-      
+
       toast.success('Profile updated successfully!');
       setIsEditing(false);
-    } catch (error) {
-      toast.error('Failed to update profile');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update profile');
     } finally {
       setIsSaving(false);
     }

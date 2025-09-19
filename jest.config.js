@@ -3,6 +3,7 @@ export default {
   transform: {
     '^.+\\.jsx?$': ['babel-jest', { configFile: './babel.config.json' }]
   },
+  transformIgnorePatterns: ['node_modules/(?!(nanoid)/)'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1'
   },

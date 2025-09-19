@@ -6,12 +6,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus, X, Link, Copy, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getApiUrl } from '@/lib/config';
+import { useAuth } from '@/contexts/AuthContext';
 
 const createUrlSchema = z.object({
-  identifier: z.string().optional().refine(
-    (val) => !val || (val.length >= 2 && val.length <= 20 && /^[a-z0-9][a-z0-9-_]*[a-z0-9]$/.test(val)),
-    'Identifier must be 2-20 characters, alphanumeric with hyphens/underscores'
-  ),
   keywords: z.array(z.object({
     value: z.string()
       .min(1, 'Keyword is required')
@@ -33,6 +31,7 @@ export function CreateUrlForm({ onSuccess }: CreateUrlFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [urlPreview, setUrlPreview] = useState('');
   const [copied, setCopied] = useState(false);
+  const { user } = useAuth();
 
   const {
     register,
@@ -44,7 +43,6 @@ export function CreateUrlForm({ onSuccess }: CreateUrlFormProps) {
   } = useForm<FormData>({
     resolver: zodResolver(createUrlSchema),
     defaultValues: {
-      identifier: '',
       keywords: [{ value: '' }],
       destination_url: '',
       title: '',
@@ -60,32 +58,34 @@ export function CreateUrlForm({ onSuccess }: CreateUrlFormProps) {
   const watchedFields = watch();
 
   useEffect(() => {
-    const identifier = watchedFields.identifier;
     const keywords = watchedFields.keywords
       ?.filter(k => k.value)
       .map(k => k.value.toLowerCase());
 
     if (keywords && keywords.length > 0) {
-      const path = identifier 
-        ? `${identifier}/${keywords.join('/')}`
+      const path = user?.identifier
+        ? `${user.identifier}/${keywords.join('/')}`
         : keywords.join('/');
       setUrlPreview(`wordsto.link/${path}`);
     } else {
       setUrlPreview('');
     }
-  }, [watchedFields.identifier, watchedFields.keywords]);
+  }, [watchedFields.keywords, user?.identifier]);
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
     
     try {
-      const response = await fetch('/api/shorten', {
+      const token = localStorage.getItem('token');
+      const response = await fetch(getApiUrl('api/shorten'), {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
         },
         body: JSON.stringify({
-          identifier: data.identifier || null,
+          identifier: user?.identifier || null,
           keywords: data.keywords.map(k => k.value.toLowerCase()),
           destination_url: data.destination_url,
           title: data.title || null,
@@ -124,24 +124,6 @@ export function CreateUrlForm({ onSuccess }: CreateUrlFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div>
-        <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-1">
-          Identifier (Optional)
-        </label>
-        <input
-          type="text"
-          {...register('identifier')}
-          placeholder="mycompany"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-        />
-        {errors.identifier && (
-          <p className="mt-1 text-sm text-red-600">{errors.identifier.message}</p>
-        )}
-        <p className="mt-1 text-xs text-gray-500">
-          Your unique namespace (e.g., wordsto.link/mycompany/keyword)
-        </p>
-      </div>
-
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Keywords

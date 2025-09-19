@@ -27,6 +27,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  // Use relative URLs - Next.js will proxy to the backend
+  const apiBase = '/api';
 
   useEffect(() => {
     // Check for stored session
@@ -43,11 +45,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const apiUrl = typeof window !== 'undefined' 
-        ? `http://${window.location.hostname}:3000/api`
-        : 'http://localhost:3000/api';
+      const url = `${apiBase}/auth/login`;
+      console.log('Attempting login to:', url);
+      console.log('With credentials:', { email, password: '***' });
       
-      const response = await fetch(`${apiUrl}/auth/login`, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -56,8 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       const data = await response.json();
+      console.log('Response status:', response.status);
+      console.log('Response data:', data);
 
       if (!response.ok) {
+        console.error('Login failed:', data);
         throw new Error(data.message || 'Login failed');
       }
 
@@ -77,18 +82,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast.success('Logged in successfully!');
       router.push('/dashboard');
     } catch (error: any) {
-      toast.error(error.message || 'Invalid email or password');
+      const isNetworkError = error instanceof TypeError;
+      if (isNetworkError) {
+        toast.error(`Network error contacting API at ${apiBase}. Check URL/CORS.`);
+      } else {
+        toast.error(error.message || 'Invalid email or password');
+      }
       throw error;
     }
   };
 
   const signup = async (email: string, password: string, name: string, identifier: string) => {
     try {
-      const apiUrl = typeof window !== 'undefined' 
-        ? `http://${window.location.hostname}:3000/api`
-        : 'http://localhost:3000/api';
-      
-      const response = await fetch(`${apiUrl}/auth/signup`, {
+      const url = `${apiBase}/auth/signup`;
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,7 +122,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast.success('Account created! Please check your email to verify your account.');
       router.push('/verify-email-sent');
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create account');
+      const isNetworkError = error instanceof TypeError;
+      if (isNetworkError) {
+        toast.error(`Network error contacting API at ${apiBase}. Check URL/CORS.`);
+      } else {
+        toast.error(error.message || 'Failed to create account');
+      }
       throw error;
     }
   };
