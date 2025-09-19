@@ -51,7 +51,7 @@ BEGIN
     FOREACH keyword IN ARRAY keywords LOOP
         -- Convert to lowercase, trim whitespace, remove special characters
         keyword := lower(trim(keyword));
-        keyword := regexp_replace(keyword, '[^a-z0-9-_]', '', 'g');
+        keyword := regexp_replace(keyword, '[^a-z0-9_-]', '', 'g');
         
         -- Only add non-empty keywords
         IF length(keyword) > 0 THEN

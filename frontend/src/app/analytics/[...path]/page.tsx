@@ -77,12 +77,39 @@ export default function AnalyticsPage() {
   const fetchAnalytics = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await api.get(`/analytics/${path}?period=${period}`);
-      setData(response.data);
+      console.log('Full response:', response);
+      console.log('Response data:', response?.data);
+
+      // Axios wraps the actual data in a 'data' property
+      const responseData = response?.data;
+
+      // Check if we got a valid response
+      if (!responseData) {
+        console.error('No data in response');
+        throw new Error('No data received from analytics API');
+      }
+
+      // Check if it's an error response
+      if (responseData.error || responseData.statusCode >= 400) {
+        console.error('API returned error:', responseData);
+        throw new Error(responseData.message || 'API returned an error');
+      }
+
+      console.log('Setting data:', responseData);
+      setData(responseData);
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Failed to fetch analytics');
+      console.error('Analytics fetch error:', err);
+      console.error('Error response:', err.response);
+
+      // Handle 404 specifically
+      if (err.response?.status === 404) {
+        setError('Analytics data not found for this URL. The URL might not exist or you might not have permission to view it.');
+      } else {
+        setError(err.response?.data?.message || err.message || 'Failed to fetch analytics');
+      }
     } finally {
       setLoading(false);
     }
@@ -99,8 +126,8 @@ export default function AnalyticsPage() {
   };
 
   const formatDeviceData = () => {
-    if (!data?.devices.devices) return [];
-    
+    if (!data?.devices?.devices) return [];
+
     return Object.entries(data.devices.devices).map(([name, value]) => ({
       name: name.charAt(0).toUpperCase() + name.slice(1),
       value
@@ -108,8 +135,8 @@ export default function AnalyticsPage() {
   };
 
   const formatBrowserData = () => {
-    if (!data?.devices.browsers) return [];
-    
+    if (!data?.devices?.browsers) return [];
+
     return Object.entries(data.devices.browsers)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
@@ -152,23 +179,25 @@ export default function AnalyticsPage() {
             <ArrowLeft className="w-4 h-4" />
             Back to dashboard
           </Link>
-          
+
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                {data.url.title || data.url.path}
+                {data.url?.title || data.url?.path || path}
               </h1>
               <div className="mt-2 flex items-center gap-4 text-sm text-gray-600">
                 <div className="flex items-center gap-1">
                   <Link2 className="w-4 h-4" />
                   <code className="font-mono bg-gray-100 px-2 py-0.5 rounded">
-                    wordsto.link/{data.url.path}
+                    wordsto.link/{data.url?.path || path}
                   </code>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  Created {format(parseISO(data.url.created_at), 'MMM d, yyyy')}
-                </div>
+                {data.url?.created_at && (
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    Created {format(parseISO(data.url.created_at), 'MMM d, yyyy')}
+                  </div>
+                )}
               </div>
             </div>
             
@@ -195,47 +224,49 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600">Total Clicks</span>
-              <MousePointer className="w-5 h-5 text-gray-400" />
+        {data?.overview && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white rounded-lg p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-600">Total Clicks</span>
+                <MousePointer className="w-5 h-5 text-gray-400" />
+              </div>
+              <div className="text-3xl font-bold text-gray-900">
+                {(data.overview.total_clicks || 0).toLocaleString()}
+              </div>
             </div>
-            <div className="text-3xl font-bold text-gray-900">
-              {data.overview.total_clicks.toLocaleString()}
+
+            <div className="bg-white rounded-lg p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-600">Unique Visitors</span>
+                <Users className="w-5 h-5 text-gray-400" />
+              </div>
+              <div className="text-3xl font-bold text-gray-900">
+                {(data.overview.unique_visitors || 0).toLocaleString()}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-600">Countries</span>
+                <Globe className="w-5 h-5 text-gray-400" />
+              </div>
+              <div className="text-3xl font-bold text-gray-900">
+                {data.overview.countries || 0}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-600">Avg Response</span>
+                <TrendingUp className="w-5 h-5 text-gray-400" />
+              </div>
+              <div className="text-3xl font-bold text-gray-900">
+                {Math.round(data.overview.avg_response_time || 0)}ms
+              </div>
             </div>
           </div>
-          
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600">Unique Visitors</span>
-              <Users className="w-5 h-5 text-gray-400" />
-            </div>
-            <div className="text-3xl font-bold text-gray-900">
-              {data.overview.unique_visitors.toLocaleString()}
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600">Countries</span>
-              <Globe className="w-5 h-5 text-gray-400" />
-            </div>
-            <div className="text-3xl font-bold text-gray-900">
-              {data.overview.countries}
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600">Avg Response</span>
-              <TrendingUp className="w-5 h-5 text-gray-400" />
-            </div>
-            <div className="text-3xl font-bold text-gray-900">
-              {Math.round(data.overview.avg_response_time)}ms
-            </div>
-          </div>
-        </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-lg p-6 border border-gray-200">
@@ -281,45 +312,53 @@ export default function AnalyticsPage() {
           <div className="bg-white rounded-lg p-6 border border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Top Countries</h2>
             <div className="space-y-3">
-              {data.geographic.slice(0, 10).map((country, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700">{country.country_name || 'Unknown'}</span>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-500">
-                      {country.unique_visitors} visitors
-                    </span>
-                    <span className="font-semibold text-gray-900">
-                      {country.clicks} clicks
-                    </span>
+              {data?.geographic && data.geographic.length > 0 ? (
+                data.geographic.slice(0, 10).map((country, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700">{country.country_name || 'Unknown'}</span>
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm text-gray-500">
+                        {country.unique_visitors || 0} visitors
+                      </span>
+                      <span className="font-semibold text-gray-900">
+                        {country.clicks || 0} clicks
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">No geographic data available yet</p>
+              )}
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg p-6 border border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Top Referrers</h2>
             <div className="space-y-3">
-              {data.referrers.slice(0, 10).map((referrer, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-0.5 text-xs rounded ${
-                      referrer.type === 'direct' ? 'bg-gray-100 text-gray-600' :
-                      referrer.type === 'social' ? 'bg-blue-100 text-blue-600' :
-                      referrer.type === 'search' ? 'bg-green-100 text-green-600' :
-                      'bg-purple-100 text-purple-600'
-                    }`}>
-                      {referrer.type}
-                    </span>
-                    <span className="text-sm text-gray-700 truncate max-w-xs">
-                      {referrer.source}
+              {data?.referrers && data.referrers.length > 0 ? (
+                data.referrers.slice(0, 10).map((referrer, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 text-xs rounded ${
+                        referrer.type === 'direct' ? 'bg-gray-100 text-gray-600' :
+                        referrer.type === 'social' ? 'bg-blue-100 text-blue-600' :
+                        referrer.type === 'search' ? 'bg-green-100 text-green-600' :
+                        'bg-purple-100 text-purple-600'
+                      }`}>
+                        {referrer.type}
+                      </span>
+                      <span className="text-sm text-gray-700 truncate max-w-xs">
+                        {referrer.source}
+                      </span>
+                    </div>
+                    <span className="font-semibold text-gray-900">
+                      {referrer.clicks || 0} clicks
                     </span>
                   </div>
-                  <span className="font-semibold text-gray-900">
-                    {referrer.clicks} clicks
-                  </span>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">No referrer data available yet</p>
+              )}
             </div>
           </div>
         </div>

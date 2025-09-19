@@ -899,22 +899,35 @@ function buildUrlPath(identifier, keywords) {
 }
 
 function buildFullUrl(request, identifier, keywords, shortCode = null) {
-    // Always use wordsto.link unless we're on localhost
+    // Use SHORT_URL_BASE from environment if set, otherwise determine from request
+    if (process.env.SHORT_URL_BASE) {
+        const baseUrl = process.env.SHORT_URL_BASE.replace(/\/$/, '');
+        if (shortCode) {
+            return `${baseUrl}/s/${shortCode}`;
+        }
+        if (identifier || keywords) {
+            const path = buildUrlPath(identifier, keywords);
+            return `${baseUrl}/${path}`;
+        }
+        return null;
+    }
+
+    // Fallback to automatic detection
     const requestHost = request.headers.host || '';
     const isLocalhost = requestHost.startsWith('localhost') || requestHost.startsWith('127.0.0.1');
-    
+
     const protocol = isLocalhost ? 'http' : 'https';
     const host = isLocalhost ? requestHost : 'wordsto.link';
     const baseUrl = `${protocol}://${host}`;
-    
+
     if (shortCode) {
         return `${baseUrl}/s/${shortCode}`;
     }
-    
+
     if (identifier || keywords) {
         const path = buildUrlPath(identifier, keywords);
         return `${baseUrl}/${path}`;
     }
-    
+
     return null;
 }
